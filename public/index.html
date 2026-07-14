@@ -310,15 +310,36 @@
         <div class="facility-card">
           <div class="facility-info">
             <div class="fname">${f.name}</div>
-            <div class="fmeta">${count} registered · scheduled ${f.call_time} daily · languages: ${langs.join(', ')}</div>
+            <div class="fmeta" id="fmeta-${f.id}">${count} registered · scheduled ${f.call_time} daily · languages: ${langs.join(', ')}</div>
           </div>
-          <button class="ghost run-single" data-id="${f.id}">Run Now</button>
+          <div class="facility-actions">
+            <input type="time" class="time-input" id="time-${f.id}" value="${f.call_time}">
+            <button class="ghost save-schedule" data-id="${f.id}">Save Time</button>
+            <button class="ghost run-single" data-id="${f.id}">Run Now</button>
+          </div>
         </div>
       `;
     }).join('');
 
     document.querySelectorAll('.run-single').forEach(btn => {
       btn.addEventListener('click', () => runRound(btn.dataset.id));
+    });
+    document.querySelectorAll('.save-schedule').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const timeValue = document.getElementById('time-' + id).value;
+        if (!timeValue) return;
+        const res = await fetch('/api/facilities/' + id + '/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ call_time: timeValue })
+        });
+        if (res.ok) {
+          logLine(`Schedule updated: facility will now call automatically at ${timeValue} daily.`);
+        } else {
+          logLine(`Failed to update schedule.`);
+        }
+      });
     });
   }
 
@@ -436,6 +457,14 @@
       case 'round_complete':
         logLine(`— Round complete: <b>${evt.facilityName}</b> · ${evt.red} red, ${evt.yellow} yellow, ${evt.green} green, ${evt.noAnswer} no answer —`);
         break;
+
+    case 'schedule_updated': {
+        const el = document.getElementById('fmeta-' + evt.facilityId);
+        if (el) {
+          el.textContent = el.textContent.replace(/scheduled \d{2}:\d{2} daily/, `scheduled ${evt.callTime} daily`);
+        }
+        break;
+      }
 
       case 'reset':
         break;
