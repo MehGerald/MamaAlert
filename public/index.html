@@ -240,6 +240,24 @@
 <div class="layout">
 
   <div class="panel">
+    <div class="section-label">Register a Mother</div>
+    <div class="facility-card" style="margin-bottom: 24px; flex-direction: column; align-items: stretch; gap: 12px;">
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="reg-name" placeholder="Full name" style="flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--paper); font-family: 'Inter', sans-serif;">
+        <input type="tel" id="reg-phone" placeholder="+234..." style="flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--paper); font-family: 'Inter', sans-serif;">
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="number" id="reg-age" placeholder="Gestational age (weeks)" style="flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--paper); font-family: 'Inter', sans-serif;">
+        <select id="reg-language" style="flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--paper); font-family: 'Inter', sans-serif;">
+          <option value="english">English</option>
+          <option value="yoruba">Yoruba</option>
+          <option value="igbo">Igbo</option>
+          <option value="hausa">Hausa</option>
+        </select>
+        <select id="reg-facility" style="flex: 1; min-width: 140px; padding: 8px 10px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--paper); font-family: 'Inter', sans-serif;"></select>
+      </div>
+      <button id="register-mother" style="align-self: flex-start;">Register Mother</button>
+    </div>
     <div class="section-label">Scheduled Call Rounds</div>
     <div class="facilities" id="facilities"></div>
 
@@ -324,6 +342,8 @@
     document.querySelectorAll('.run-single').forEach(btn => {
       btn.addEventListener('click', () => runRound(btn.dataset.id));
     });
+    const facilitySelect = document.getElementById('reg-facility');
+    facilitySelect.innerHTML = facilities.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
     document.querySelectorAll('.save-schedule').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
@@ -471,6 +491,34 @@
     }
   };
 
+  document.getElementById('register-mother').addEventListener('click', async () => {
+    const name = document.getElementById('reg-name').value.trim();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const gestational_age = document.getElementById('reg-age').value;
+    const language = document.getElementById('reg-language').value;
+    const facility_id = document.getElementById('reg-facility').value;
+
+    if (!name || !phone || !gestational_age || !facility_id) {
+      logLine('Registration failed: please fill in all fields.');
+      return;
+    }
+
+    const res = await fetch('/api/mothers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, gestational_age, language, facility_id })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      state.mothers[data.mother.id] = data.mother;
+      logLine(`✔ Registered ${name} at ${facility_id} — will be included in the next scheduled round.`);
+      document.getElementById('reg-name').value = '';
+      document.getElementById('reg-phone').value = '';
+      document.getElementById('reg-age').value = '';
+    } else {
+      logLine(`Registration failed: ${data.error}`);
+    }
+  });
   loadFacilities();
 </script>
 
