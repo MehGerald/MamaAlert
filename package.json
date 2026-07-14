@@ -1,0 +1,21 @@
+{
+  "name": "mamaalert-demo",
+  "version": "1.0.0",
+  "description": "MamaAlert - automated maternal danger-sign screening calls, triage, and health-worker alerts",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "seed": "node scripts/seed.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.0",
+    "better-sqlite3": "^11.1.2",
+    "node-cron": "^3.0.3",
+    "nanoid": "^5.0.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
