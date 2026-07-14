@@ -295,10 +295,11 @@
 </div>
 
 <script>
-  const state = {
+  
+    const state = {
     facilities: [],
-    mothers: {},        // id -> mother
-    nodes: {},           // motherId -> node element
+    mothers: {},
+    nodes: {},
   };
 
   function fmtClock() {
@@ -400,7 +401,7 @@
   }
 
   const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-   const ws = new WebSocket(`${wsProtocol}://${location.host}/ws`);
+  const ws = new WebSocket(`${wsProtocol}://${location.host}/ws`);
   ws.onmessage = (msg) => {
     const evt = JSON.parse(msg.data);
     const mother = state.mothers[evt.motherId];
