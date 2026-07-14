@@ -399,7 +399,8 @@
     feed.prepend(div);
   }
 
-  const ws = new WebSocket(`ws://${location.host}/ws`);
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+   const ws = new WebSocket(`${wsProtocol}://${location.host}/ws`);
   ws.onmessage = (msg) => {
     const evt = JSON.parse(msg.data);
     const mother = state.mothers[evt.motherId];
