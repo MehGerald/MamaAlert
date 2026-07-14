@@ -30,6 +30,21 @@ function broadcast(event) {
 app.get("/api/facilities", (req, res) => {
   res.json(db.prepare("SELECT * FROM facilities").all());
 });
+app.post("/api/mothers", (req, res) => {
+  const { name, phone, gestational_age, language, facility_id } = req.body;
+  if (!name || !phone || !gestational_age || !language || !facility_id) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+  const id = "m" + Date.now() + Math.floor(Math.random() * 1000);
+  db.prepare(
+    `INSERT INTO mothers (id, name, phone, gestational_age, language, facility_id, registered_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(id, name, phone, gestational_age, language, facility_id, new Date().toISOString());
+
+  const mother = db.prepare("SELECT * FROM mothers WHERE id = ?").get(id);
+  broadcast({ type: "mother_registered", mother });
+  res.json({ ok: true, mother });
+});
 
 app.get("/api/mothers", (req, res) => {
   res.json(db.prepare("SELECT * FROM mothers").all());
