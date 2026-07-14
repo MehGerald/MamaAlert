@@ -1,15 +1,16 @@
 // index.js
-// Entry point: serves the dashboard, exposes REST endpoints for state,
-// and pushes live call/alert events to the dashboard over WebSocket so
-// judges see the automation happen in real time rather than a static log.
-
 import express from "express";
 import { WebSocketServer } from "ws";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { db } from "./db.js";
-import { runFacilityRound, runAllFacilitiesRound, registerDailyCronJobs } from "./scheduler.js";
+import {
+  runFacilityRound,
+  runAllFacilitiesRound,
+  registerDailyCronJobs,
+  updateFacilitySchedule,
+} from "./scheduler.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -25,8 +26,6 @@ function broadcast(event) {
     if (client.readyState === 1) client.send(payload);
   });
 }
-
-// --- REST: read state ---
 
 app.get("/api/facilities", (req, res) => {
   res.json(db.prepare("SELECT * FROM facilities").all());
@@ -64,8 +63,6 @@ app.post("/api/alerts/:id/acknowledge", (req, res) => {
   res.json({ ok: true });
 });
 
-// --- REST: trigger a round (demo control - "Run tonight's round now") ---
-
 app.post("/api/rounds/run/:facilityId", async (req, res) => {
   res.json({ started: true });
   await runFacilityRound(req.params.facilityId, broadcast);
@@ -74,6 +71,16 @@ app.post("/api/rounds/run/:facilityId", async (req, res) => {
 app.post("/api/rounds/run-all", async (req, res) => {
   res.json({ started: true });
   await runAllFacilitiesRound(broadcast);
+});
+
+app.post("/api/facilities/:id/schedule", (req, res) => {
+  const { call_time } = req.body;
+  if (!/^\d{2}:\d{2}$/.test(call_time || "")) {
+    return res.status(400).json({ error: "call_time must be in HH:MM format" });
+  }
+  const { facility, expression } = updateFacilitySchedule(req.params.id, call_time, broadcast);
+  broadcast({ type: "schedule_updated", facilityId: facility.id, callTime: facility.call_time });
+  res.json({ ok: true, facility, cronExpression: expression });
 });
 
 app.post("/api/reset", async (req, res) => {
@@ -85,9 +92,5 @@ app.post("/api/reset", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`MamaAlert demo running at http://localhost:${PORT}`);
-  // Registers the real 7 PM cron per facility - this is what makes the
-  // scheduling "actually automated" rather than button-triggered, exactly
-  // matching the doc's cron/queue-worker design. Judges can also use the
-  // dashboard button to fast-forward through a round live.
   registerDailyCronJobs(broadcast);
 });
