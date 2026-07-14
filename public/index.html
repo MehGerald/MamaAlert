@@ -345,7 +345,7 @@
   });
   document.getElementById('reset').addEventListener('click', async () => {
     await fetch('/api/reset', { method: 'POST' });
-    document.getElementById('wave-stage').innerHTML = '<div class="wave-empty">Reset. Press "Run Tonight\\'s 7:00 PM Round" to simulate the scheduled dial-out.</div>';
+    document.getElementById('wave-stage').innerHTML = '<div class="wave-empty">Reset. Press the button above to simulate the scheduled dial-out.</div>';
     document.getElementById('log').innerHTML = '';
     document.getElementById('alert-feed').innerHTML = '<div class="alert-empty">No alerts yet this session.</div>';
     document.getElementById('summary-row').style.display = 'none';
