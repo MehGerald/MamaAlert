@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MamaAlert — Monitoring</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0B1A2E; --bg-raised:#14243F; --paper:#F5F0E6; --amber:#D9A441; --sage:#8FA89B; --green:#3E7C59; --red:#C93B3B; --line:#24406B; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--paper); font-family:'Inter',sans-serif; min-height:100vh; }
+  .topbar { padding:24px 40px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .brand { font-size:20px; font-weight:700; }
+  .brand span { color:var(--amber); }
+  nav a { color:var(--sage); text-decoration:none; font-size:13px; margin-left:22px; font-family:'IBM Plex Mono',monospace; }
+  nav a.active { color:var(--amber); }
+  .content { max-width:1300px; margin:0 auto; padding:30px 40px; }
+  .section-label { font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--sage); margin:24px 0 12px; }
+  .cols { display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; }
+  .col { background:var(--bg-raised); border:1px solid var(--line); border-radius:8px; padding:16px; min-height:200px; }
+  .col h3 { margin:0 0 12px; font-size:14px; font-family:'IBM Plex Mono',monospace; }
+  .col.red h3 { color:var(--red); } .col.yellow h3 { color:var(--amber); } .col.green h3 { color:var(--green); }
+  .item { border-left:3px solid var(--line); padding:8px 10px; margin-bottom:8px; font-size:12.5px; background:rgba(255,255,255,0.03); border-radius:0 6px 6px 0; }
+  .col.red .item { border-left-color:var(--red); }
+  .col.yellow .item { border-left-color:var(--amber); }
+  .col.green .item { border-left-color:var(--green); }
+  .item .name { font-weight:700; }
+  .item .meta { color:var(--sage); font-family:'IBM Plex Mono',monospace; font-size:10.5px; margin-top:2px; }
+  .item button { margin-top:6px; font-size:10.5px; padding:4px 8px; background:var(--red); color:#fff; border:none; border-radius:4px; cursor:pointer; }
+  .item.ack button { background:var(--sage); }
+  .log { font-family:'IBM Plex Mono',monospace; font-size:11.5px; max-height:260px; overflow-y:auto; margin-top:10px; }
+  .log div { color:var(--sage); margin-bottom:5px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">Mama<span>Alert</span></div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/facilities.html">Facilities</a>
+      <a href="/register.html">Register</a>
+      <a class="active" href="/monitoring.html">Monitoring</a>
+    </nav>
+  </div>
+  <div class="content">
+    <div class="section-label">Triage Status — Live</div>
+    <div class="cols">
+      <div class="col red"><h3>RED — Needs Immediate Attention</h3><div id="col-red"></div></div>
+      <div class="col yellow"><h3>YELLOW — Review Within 48h</h3><div id="col-yellow"></div></div>
+      <div class="col green"><h3>GREEN — No Danger Signs</h3><div id="col-green"></div></div>
+    </div>
+    <div class="section-label">Live Event Log</div>
+    <div class="log" id="log"></div>
+  </div>
+
+<script>
+  const mothersById = {};
+  const alertsByCallId = {};
+
+  function logLine(text) {
+    const log = document.getElementById('log');
+    const div = document.createElement('div');
+    div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+    log.prepend(div);
+  }
+
+  function renderItem(call) {
+    const alert = alertsByCallId[call.id];
+    const ackClass = alert && alert.acknowledged ? 'ack' : '';
+    const ackBtn = call.flag === 'red'
+      ? `<button data-alert-id="${alert ? alert.id : ''}" class="ack-btn" ${alert && alert.acknowledged ? 'disabled' : ''}>${alert && alert.acknowledged ? 'Acknowledged' : 'Acknowledge'}</button>`
+      : '';
+    return `<div class="item ${ackClass}">
+      <div class="name">${call.mother_name}</div>
+      <div class="meta">${call.facility_id} · ${new Date(call.timestamp).toLocaleString()}</div>
+      ${ackBtn}
+    </div>`;
+  }
+
+  async function loadAll() {
+    const [calls, alerts] = await Promise.all([
+      fetch('/api/calls').then(r => r.json()),
+      fetch('/api/alerts').then(r => r.json()),
+    ]);
+    alerts.forEach(a => alertsByCallId[a.call_id] = a);
+
+    const red = calls.filter(c => c.flag === 'red');
+    const yellow = calls.filter(c => c.flag === 'yellow');
+    const green = calls.filter(c => c.flag === 'green');
+
+    document.getElementById('col-red').innerHTML = red.map(renderItem).join('') || '<div class="meta">None yet.</div>';
+    document.getElementById('col-yellow').innerHTML = yellow.map(renderItem).join('') || '<div class="meta">None yet.</div>';
+    document.getElementById('col-green').innerHTML = green.map(renderItem).join('') || '<div class="meta">None yet.</div>';
+
+    document.querySelectorAll('.ack-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!btn.dataset.alertId) return;
+        await fetch('/api/alerts/' + btn.dataset.alertId + '/acknowledge', { method: 'POST' });
+        loadAll();
+      });
+    });
+  }
+
+  const ws = new WebSocket('wss://' + location.host + '/ws');
+  ws.onmessage = (msg) => {
+    const evt = JSON.parse(msg.data);
+    if (evt.type === 'round_started') logLine(`Round started: ${evt.facilityName} (${evt.motherCount} mothers)`);
+    if (evt.type === 'call_complete') { logLine(`${evt.motherName} — flag: ${evt.flag}`); loadAll(); }
+    if (evt.type === 'alert_sent') logLine(`Alert sent for ${evt.motherId}`);
+    if (evt.type === 'alert_acknowledged') loadAll();
+    if (evt.type === 'one_time_fired') logLine(`One-time schedule fired for ${evt.facilityId}`);
+    if (evt.type === 'round_complete') logLine(`Round complete: ${evt.facilityName} — ${evt.red} red, ${evt.yellow} yellow, ${evt.green} green`);
+  };
+
+  loadAll();
+  setInterval(loadAll, 15000);
+</script>
+</body>
+</html>
