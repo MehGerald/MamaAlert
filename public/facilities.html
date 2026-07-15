@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MamaAlert — Facilities</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0B1A2E; --bg-raised:#14243F; --paper:#F5F0E6; --amber:#D9A441; --sage:#8FA89B; --green:#3E7C59; --line:#24406B; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--paper); font-family:'Inter',sans-serif; min-height:100vh; }
+  .topbar { padding:24px 40px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .brand { font-size:20px; font-weight:700; }
+  .brand span { color:var(--amber); }
+  nav a { color:var(--sage); text-decoration:none; font-size:13px; margin-left:22px; font-family:'IBM Plex Mono',monospace; }
+  nav a.active { color:var(--amber); }
+  .content { max-width:900px; margin:0 auto; padding:40px; }
+  .fcard { background:var(--bg-raised); border:1px solid var(--line); border-radius:10px; padding:24px; margin-bottom:20px; }
+  .fname { font-size:18px; font-weight:700; margin-bottom:4px; }
+  .fmeta { font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--sage); margin-bottom:18px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  label { font-size:11.5px; color:var(--sage); font-family:'IBM Plex Mono',monospace; margin-right:6px; }
+  input, button { font-family:'Inter',sans-serif; font-size:13px; padding:9px 12px; border-radius:4px; border:1px solid var(--line); background:var(--bg); color:var(--paper); }
+  button { background:#2C5282; color:#fff; border:none; cursor:pointer; font-weight:600; }
+  button:hover { background:#2A4A75; }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--sage); }
+  .countdown { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--amber); margin-top:8px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">Mama<span>Alert</span></div>
+    <nav>
+      <a href="/">Home</a>
+      <a class="active" href="/facilities.html">Facilities</a>
+      <a href="/register.html">Register</a>
+      <a href="/monitoring.html">Monitoring</a>
+    </nav>
+  </div>
+  <div class="content" id="facilities"></div>
+
+<script>
+  let schedules = {};
+
+  async function load() {
+    const [facilities, mothers, onceSchedules] = await Promise.all([
+      fetch('/api/facilities').then(r => r.json()),
+      fetch('/api/mothers').then(r => r.json()),
+      fetch('/api/schedule-once').then(r => r.json()),
+    ]);
+    schedules = onceSchedules;
+    const container = document.getElementById('facilities');
+    container.innerHTML = facilities.map(f => {
+      const count = mothers.filter(m => m.facility_id === f.id).length;
+      const langs = [...new Set(mothers.filter(m => m.facility_id === f.id).map(m => m.language))];
+      const onceInfo = schedules[f.id] ? `<div class="countdown" id="countdown-${f.id}"></div><button class="ghost cancel-once" data-id="${f.id}">Cancel one-time schedule</button>` : '';
+      return `
+        <div class="fcard">
+          <div class="fname">${f.name}</div>
+          <div class="fmeta">${count} registered · daily at ${f.call_time} · languages: ${langs.join(', ')}</div>
+
+          <div class="row">
+            <label>Daily time</label>
+            <input type="time" id="time-${f.id}" value="${f.call_time}">
+            <button class="save-daily" data-id="${f.id}">Save Daily Time</button>
+          </div>
+
+          <div class="row">
+            <label>One-time (exact date &amp; time)</label>
+            <input type="datetime-local" id="once-${f.id}">
+            <button class="save-once" data-id="${f.id}">Schedule Once</button>
+          </div>
+          ${onceInfo}
+
+          <div class="row">
+            <button class="ghost run-now" data-id="${f.id}">Run Now</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.save-daily').forEach(btn => btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const val = document.getElementById('time-' + id).value;
+      if (!val) return;
+      await fetch('/api/facilities/' + id + '/schedule', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ call_time: val }) });
+      load();
+    }));
+
+    document.querySelectorAll('.save-once').forEach(btn => btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const val = document.getElementById('once-' + id).value;
+      if (!val) return;
+      const res = await fetch('/api/facilities/' + id + '/schedule-once', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ run_at: val }) });
+      const data = await res.json();
+      if (!res.ok) alert(data.error);
+      load();
+    }));
+
+    document.querySelectorAll('.cancel-once').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch('/api/facilities/' + btn.dataset.id + '/schedule-once/cancel', { method: 'POST' });
+      load();
+    }));
+
+    document.querySelectorAll('.run-now').forEach(btn => btn.addEventListener('click', async () => {
+      await fetch('/api/rounds/run/' + btn.dataset.id, { method: 'POST' });
+      alert('Round started — check the Monitoring page.');
+    }));
+
+    startCountdowns();
+  }
+
+  function startCountdowns() {
+    setInterval(() => {
+      Object.entries(schedules).forEach(([fid, iso]) => {
+        const el = document.getElementById('countdown-' + fid);
+        if (!el) return;
+        const diff = new Date(iso).getTime() - Date.now();
+        if (diff <= 0) { el.textContent = 'Firing now...'; return; }
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        el.textContent = `Scheduled for ${new Date(iso).toLocaleString()} — fires in ${mins}m ${secs}s`;
+      });
+    }, 1000);
+  }
+
+  load();
+</script>
+</body>
+</html>
