@@ -6,38 +6,88 @@
 <title>MamaAlert</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0B1A2E; --bg-raised:#14243F; --paper:#F5F0E6; --amber:#D9A441; --sage:#8FA89B; --line:#24406B; }
+  :root { --bg:#0B1A2E; --bg-raised:#14243F; --paper:#F5F0E6; --amber:#D9A441; --sage:#8FA89B; --green:#3E7C59; --red:#C93B3B; --line:#24406B; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--paper); font-family:'Inter',sans-serif; min-height:100vh; }
   .topbar { padding:28px 40px; border-bottom:1px solid var(--line); }
   .brand { font-size:26px; font-weight:700; }
   .brand span { color:var(--amber); }
   .subtitle { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--sage); text-transform:uppercase; letter-spacing:0.04em; margin-top:4px; }
-  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; padding:60px 40px; max-width:1100px; margin:0 auto; }
-  .card { background:var(--bg-raised); border:1px solid var(--line); border-radius:10px; padding:32px 26px; text-decoration:none; color:var(--paper); display:block; transition:border-color .15s; }
+
+  .content { max-width:900px; margin:0 auto; padding:50px 40px; }
+
+  .intro p { font-size:15px; line-height:1.7; color:var(--paper); max-width:700px; }
+  .intro p.lead { font-size:17px; color:var(--paper); margin-bottom:20px; }
+
+  .section-label { font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--sage); margin:40px 0 16px; display:flex; align-items:center; gap:10px; }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--line); }
+
+  .signs-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .sign { background:var(--bg-raised); border:1px solid var(--line); border-left:4px solid var(--sage); border-radius:0 8px 8px 0; padding:14px 16px; font-size:13.5px; }
+  .sign.red { border-left-color:var(--red); }
+  .sign.yellow { border-left-color:var(--amber); }
+  .sign .tag { font-family:'IBM Plex Mono',monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; display:block; }
+  .sign.red .tag { color:var(--red); }
+  .sign.yellow .tag { color:var(--amber); }
+
+  .legend { display:flex; gap:24px; margin-top:16px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:10px; font-size:13.5px; }
+  .dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+  .legend-item .desc { color:var(--sage); font-size:12px; }
+
+  .nav-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:16px; }
+  .card { background:var(--bg-raised); border:1px solid var(--line); border-radius:10px; padding:24px 20px; text-decoration:none; color:var(--paper); display:block; transition:border-color .15s; }
   .card:hover { border-color:var(--amber); }
-  .card h2 { margin:0 0 10px; font-size:19px; }
-  .card p { margin:0; font-size:13px; color:var(--sage); line-height:1.5; }
+  .card h2 { margin:0 0 8px; font-size:16px; }
+  .card p { margin:0; font-size:12.5px; color:var(--sage); line-height:1.5; }
 </style>
 </head>
 <body>
   <div class="topbar">
     <div class="brand">Mama<span>Alert</span></div>
-    <div class="subtitle">Facility Triage Console</div>
+    <div class="subtitle">Automated Maternal Danger-Sign Screening</div>
   </div>
-  <div class="grid">
-    <a class="card" href="/facilities.html">
-      <h2>Facilities &amp; Scheduling</h2>
-      <p>Browse registered health facilities, set daily call times, or schedule a one-time call round for an exact date and time.</p>
-    </a>
-    <a class="card" href="/register.html">
-      <h2>Register a Mother</h2>
-      <p>Add a new mother to a facility's screening list, with her preferred language and gestational age.</p>
-    </a>
-    <a class="card" href="/monitoring.html">
-      <h2>Live Monitoring</h2>
-      <p>Watch call rounds happen in real time, with danger-sign results separated by red, yellow, and green triage status.</p>
-    </a>
+
+  <div class="content">
+
+    <div class="intro">
+      <p class="lead">MamaAlert calls registered pregnant women on a schedule, in their own language, and asks six WHO-based danger-sign questions — no smartphone, app, or literacy required.</p>
+      <p>Each answer is scored automatically. If a call comes back red, a health worker is alerted immediately, closing the gap between a danger sign appearing and someone finding out about it.</p>
+    </div>
+
+    <div class="section-label">The Six Danger Signs</div>
+    <div class="signs-grid">
+      <div class="sign red"><span class="tag">Red flag</span>Vaginal bleeding</div>
+      <div class="sign red"><span class="tag">Red flag</span>Severe headache or blurred vision</div>
+      <div class="sign red"><span class="tag">Red flag</span>Reduced or stopped fetal movement</div>
+      <div class="sign yellow"><span class="tag">Yellow flag</span>Fever</div>
+      <div class="sign yellow"><span class="tag">Yellow flag</span>New facial or hand swelling</div>
+      <div class="sign yellow"><span class="tag">Yellow flag</span>Unusual abdominal pain</div>
+    </div>
+
+    <div class="section-label">Color Coding</div>
+    <div class="legend">
+      <div class="legend-item"><span class="dot" style="background:var(--red)"></span><div><div>RED</div><div class="desc">Immediate health-worker alert</div></div></div>
+      <div class="legend-item"><span class="dot" style="background:var(--amber)"></span><div><div>YELLOW</div><div class="desc">Review within 48 hours</div></div></div>
+      <div class="legend-item"><span class="dot" style="background:var(--green)"></span><div><div>GREEN</div><div class="desc">No danger signs reported</div></div></div>
+    </div>
+
+    <div class="section-label">Go To</div>
+    <div class="nav-grid">
+      <a class="card" href="/facilities.html">
+        <h2>Facilities &amp; Scheduling</h2>
+        <p>Browse facilities, set daily call times, or schedule a one-time call round.</p>
+      </a>
+      <a class="card" href="/register.html">
+        <h2>Register a Mother</h2>
+        <p>Add a mother to a facility's screening list.</p>
+      </a>
+      <a class="card" href="/monitoring.html">
+        <h2>Live Monitoring</h2>
+        <p>Watch call rounds, separated by red, yellow, and green status.</p>
+      </a>
+    </div>
+
   </div>
 </body>
 </html>
